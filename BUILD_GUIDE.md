@@ -37,14 +37,10 @@ npm start
   ```
 
 ### 🍎 macOS (빌드 도구는 macOS에서 실행해야 함)
-- 기본 DMG (x64)
+- Universal DMG (Intel x64 + Apple Silicon arm64, 네이티브 실행 — Rosetta 2 불필요)
   ```bash
   npm run dist:mac
   # 출력: dist/Vidlync-Mac-0.1.0.dmg
-  ```
-- Universal (x64 + arm64)
-  ```bash
-  npx electron-builder --mac --x64 --arm64
   ```
 
 ### 🌍 모든 플랫폼

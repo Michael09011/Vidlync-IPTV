@@ -118,25 +118,13 @@ function ensureFixedSidebarToggle() {
   if (!btn) {
     btn = document.createElement('button');
     btn.id = 'sidebarToggleFixed';
-    btn.className = 'sidebar-toggle-fixed';
-    // inject minimal styles once
-    if (!document.getElementById('sidebarToggleFixedStyles')) {
-      const style = document.createElement('style');
-      style.id = 'sidebarToggleFixedStyles';
-      style.textContent = `
-        .sidebar-toggle-fixed { position: fixed; left: 12px; top: 12px; z-index:10001; width:44px; height:44px; border-radius:8px; padding:0; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; background:var(--primary); color:#fff; border:none; box-shadow:0 6px 20px rgba(0,0,0,0.45); transition: transform 160ms ease, opacity 160ms ease; }
-        .sidebar-toggle-fixed:hover { transform: scale(1.06); }
-        .sidebar-toggle-fixed.pulse { animation: sidebarPulse 2s infinite; }
-        @keyframes sidebarPulse { 0% { box-shadow: 0 6px 20px rgba(124,58,237,0.28); } 50% { box-shadow: 0 10px 30px rgba(124,58,237,0.36); } 100% { box-shadow: 0 6px 20px rgba(124,58,237,0.28); } }
-      `;
-      document.head.appendChild(style);
-    }
-    document.body.appendChild(btn);
+    // place it among the header's own buttons so it shares their look
+    const header = document.querySelector('header');
+    if (header) header.insertBefore(btn, header.firstChild);
+    else document.body.appendChild(btn);
   }
   btn.innerHTML = sidebarHidden ? '&#9654;' : '&#9664;';
   btn.title = t('sidebarToggle');
-  // add pulse when visible to draw attention
-  if (!sidebarHidden) btn.classList.add('pulse'); else btn.classList.remove('pulse');
   btn.onclick = () => {
     // Toggle state and update layout in-place to avoid re-creating the video element
     sidebarHidden = !sidebarHidden;
@@ -149,11 +137,10 @@ function ensureFixedSidebarToggle() {
       if (lc) lc.style.opacity = sidebarHidden ? '0' : '1';
     } catch (e) {}
     // update button appearance
-    t.innerHTML = sidebarHidden ? '&#9654;' : '&#9664;';
-    t.title = sidebarHidden ? '사이드바 열기' : '사이드바 숨기기';
-    if (!sidebarHidden) t.classList.add('pulse'); else t.classList.remove('pulse');
+    btn.innerHTML = sidebarHidden ? '&#9654;' : '&#9664;';
+    btn.title = t('sidebarToggle');
   };
-  return t;
+  return btn;
 }
 let selectedPlaylistId = null;
 let selectedPlaylistName = null;
@@ -250,9 +237,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function showSettingsModal() {
   const settings = await window.electronAPI.settingsGet().catch(()=> ({}));
-  const modal = document.createElement('div'); modal.style.position='fixed'; modal.style.left=0; modal.style.top=0; modal.style.right=0; modal.style.bottom=0; modal.style.zIndex='10000'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.background='rgba(0,0,0,0.6)';
-  const body = document.createElement('div'); body.style.background='var(--card)'; body.style.padding='18px'; body.style.borderRadius='8px'; body.style.width='420px'; body.style.border='1px solid var(--border)';
-  const title = document.createElement('h3'); title.textContent = t('settings'); title.style.margin='0 0 12px 0'; body.appendChild(title);
+  const modal = document.createElement('div'); modal.className = 'modal-overlay';
+  const body = document.createElement('div'); body.className = 'modal-box'; body.style.width='420px';
+  const title = document.createElement('h3'); title.textContent = t('settings'); body.appendChild(title);
 
   // GPU toggle
   const gpuRow = document.createElement('div'); gpuRow.style.display='flex'; gpuRow.style.alignItems='center'; gpuRow.style.gap='8px'; gpuRow.style.marginBottom='8px';
@@ -500,6 +487,14 @@ function updateCurrentChannelDisplay() {
   } catch (e) {}
 }
 
+function updateActiveChannelHighlight() {
+  try {
+    document.querySelectorAll('.channel').forEach((el) => {
+      el.classList.toggle('active', !!el.dataset.url && el.dataset.url === currentPlayingUrl);
+    });
+  } catch (e) {}
+}
+
 function toggleFav(ch) {
   if (!ch || !ch.url) return;
   try {
@@ -524,10 +519,9 @@ function toggleFav(ch) {
 
 async function showUrlModal() {
   const modal = document.createElement('div');
-  modal.style.position = 'fixed'; modal.style.left = 0; modal.style.top = 0; modal.style.right = 0; modal.style.bottom = 0; modal.style.zIndex='10000';
-  modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.background='rgba(0,0,0,0.6)';
-  const body = document.createElement('div'); body.style.background='var(--card)'; body.style.padding='18px'; body.style.borderRadius='8px'; body.style.width='520px'; body.style.border='1px solid var(--border)';
-  const title = document.createElement('h3'); title.textContent = t('loadUrl'); title.style.margin='0 0 12px 0'; body.appendChild(title);
+  modal.className = 'modal-overlay';
+  const body = document.createElement('div'); body.className = 'modal-box'; body.style.width='520px';
+  const title = document.createElement('h3'); title.textContent = t('loadUrl'); body.appendChild(title);
 
   // show current playing status (without URL detail)
   const curDiv = document.createElement('div'); curDiv.style.marginBottom='8px'; curDiv.style.color='var(--text-muted)';
@@ -627,10 +621,9 @@ function ensureSortableLoaded() {
 async function showBackupsModal() {
   const res = await window.electronAPI.playlistsBackups();
   const modal = document.createElement('div');
-  modal.style.position = 'fixed'; modal.style.left = 0; modal.style.top = 0; modal.style.right = 0; modal.style.bottom = 0;
-  modal.style.background = 'rgba(0,0,0,0.6)'; modal.style.display = 'flex'; modal.style.alignItems = 'center'; modal.style.justifyContent = 'center'; modal.style.zIndex = '10000';
-  const body = document.createElement('div'); body.style.background = 'var(--card)'; body.style.padding = '20px'; body.style.width = '520px'; body.style.maxHeight='80%'; body.style.overflow='auto'; body.style.borderRadius='8px'; body.style.border = '1px solid var(--border)';
-  const title = document.createElement('h3'); title.textContent = '백업 관리'; title.style.margin = '0 0 16px 0'; title.style.color = 'var(--text-primary)'; body.appendChild(title);
+  modal.className = 'modal-overlay';
+  const body = document.createElement('div'); body.className = 'modal-box'; body.style.width = '520px'; body.style.maxHeight='80%'; body.style.overflow='auto';
+  const title = document.createElement('h3'); title.textContent = '백업 관리'; body.appendChild(title);
   const list = document.createElement('select'); list.style.width = '100%'; list.style.height = '220px'; list.style.marginBottom = '12px'; list.style.background = '#0f1419'; list.style.color = 'var(--text-primary)'; list.style.border = '1px solid var(--border)'; list.style.borderRadius = '6px'; list.style.padding = '8px';
   if (res && res.ok && Array.isArray(res.backups)) {
     res.backups.forEach(b => { const opt = document.createElement('option'); opt.value = b.name; opt.textContent = `${new Date(b.mtime).toLocaleString()} — ${b.name}`; list.appendChild(opt); });
@@ -729,10 +722,9 @@ function scheduleAutoEPGRefresh() {
 
 async function showFavoritesModal() {
   const modal = document.createElement('div');
-  modal.style.position = 'fixed'; modal.style.left = 0; modal.style.top = 0; modal.style.right = 0; modal.style.bottom = 0;
-  modal.style.background = 'rgba(0,0,0,0.6)'; modal.style.display = 'flex'; modal.style.alignItems = 'center'; modal.style.justifyContent = 'center'; modal.style.zIndex = '10000';
-  const body = document.createElement('div'); body.style.background = 'var(--card)'; body.style.padding = '18px'; body.style.width = '780px'; body.style.maxHeight='86%'; body.style.overflow='auto'; body.style.borderRadius='8px'; body.style.border = '1px solid var(--border)';
-  const title = document.createElement('h3'); title.textContent = '즐겨찾기 관리'; title.style.margin = '0 0 12px 0'; title.style.color = 'var(--text-primary)'; body.appendChild(title);
+  modal.className = 'modal-overlay';
+  const body = document.createElement('div'); body.className = 'modal-box'; body.style.width = '780px'; body.style.maxHeight='86%'; body.style.overflow='auto';
+  const title = document.createElement('h3'); title.textContent = '즐겨찾기 관리'; body.appendChild(title);
 
   const container = document.createElement('div'); container.style.display='flex'; container.style.gap='12px';
 
@@ -902,14 +894,7 @@ function renderMainScreen() {
   if (!editMode) {
     savedPlaylists.forEach(p => {
       const item = document.createElement('div');
-      item.style.padding = '10px';
-      item.style.borderRadius = '6px';
-      item.style.background = 'var(--accent)';
-      item.style.cursor = 'pointer';
-      item.style.transition = 'all 0.15s';
-      item.style.fontSize = '12px';
-      item.onmouseenter = () => { item.style.background = '#334155'; item.style.transform = 'translateX(2px)'; };
-      item.onmouseleave = () => { item.style.background = 'var(--accent)'; item.style.transform = 'translateX(0)'; };
+      item.className = 'list-item';
 
       const nameDiv = document.createElement('div');
       nameDiv.textContent = p.name;
@@ -1207,13 +1192,8 @@ function renderMainScreen() {
 
   Array.from(favorites.entries()).forEach(([url, info]) => {
     const item = document.createElement('div');
-    item.style.padding = '8px';
-    item.style.borderRadius = '4px';
-    item.style.background = 'var(--accent)';
-    item.style.cursor = 'pointer';
+    item.className = 'list-item';
     item.style.fontSize = '11px';
-    item.onmouseenter = () => { item.style.background = '#334155'; };
-    item.onmouseleave = () => { item.style.background = 'var(--accent)'; };
 
     const nameDiv = document.createElement('div');
     nameDiv.textContent = info.name || url;
@@ -1471,7 +1451,8 @@ function renderChannelList(channelSection, groupSel, favOnlyChk) {
 
     filtered.forEach((ch) => {
       const el = document.createElement('div');
-      el.className = 'channel';
+      el.className = 'channel' + (ch.url === currentPlayingUrl ? ' active' : '');
+      el.dataset.url = ch.url || '';
 
       const logo = document.createElement('img');
       logo.src = ch.logo || '';
@@ -1579,7 +1560,8 @@ function renderFavoritesScreen(channelSection, groupSel) {
 
     filtered.forEach((ch) => {
       const el = document.createElement('div');
-      el.className = 'channel';
+      el.className = 'channel' + (ch.url === currentPlayingUrl ? ' active' : '');
+      el.dataset.url = ch.url || '';
 
       const logo = document.createElement('img');
       logo.src = ch.logo || '';
@@ -1701,6 +1683,7 @@ async function playChannelWithFFmpeg(ch) {
       statusDiv.style.color = '#10b981';
       currentPlayingUrl = url;
       isRetrying = false;
+      try { updateActiveChannelHighlight(); } catch (e) {}
       currentVideo.play().catch(err => {
         console.error('[HLS] Play error:', err);
         showToast('재생 실패', 'error');
@@ -1871,6 +1854,7 @@ async function playChannel(ch) {
   currentPlayingUrl = url;
   isRetrying = false;
   try { updateCurrentChannelDisplay(); } catch (e) {}
+  try { updateActiveChannelHighlight(); } catch (e) {}
 
   if (currentHls) { try { currentHls.destroy(); } catch (e) {} currentHls = null; }
   if (currentVideo && currentVideo !== video) { try { currentVideo.pause(); } catch (e) {} }
